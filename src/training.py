@@ -2,6 +2,7 @@
 # @Author : YourZhou
 # @Time : 2019-11-30
 
+
 import paddle.fluid as fluid
 import os
 from paddle.utils.plot import Ploter
@@ -36,20 +37,25 @@ def train():
     cfig = ConfigFactory()
 
     # 变量定义
-    input_img_data = fluid.data(name='input_img_data', shape=[1, 3, 256, 256], dtype='float32')
-    density_map_data = fluid.data(name='density_map_data', shape=[1, 1, 64, 64], dtype='float32')
+    input_img_data = fluid.data(name='input_img_data', shape=[-1, 3, 256, 256], dtype='float32')
+    density_map_data = fluid.data(name='density_map_data', shape=[-1, 1, 64, 64], dtype='float32')
 
     # network generation网络生成
     inference_density_map = multi_column_cnn(input_img_data)
 
     # density map loss密度图损失
-    loss_sub = fluid.layers.elementwise_sub(density_map_data, inference_density_map)
-    density_map_loss = 0.5 * fluid.layers.reduce_sum(fluid.layers.square(loss_sub))
+    # loss_sub = fluid.layers.elementwise_sub(density_map_data, inference_density_map)
+    # density_map_loss = 0.5 * fluid.layers.reduce_sum(fluid.layers.square(loss_sub))
+    squar = fluid.layers.square_error_cost(input=inference_density_map, label=density_map_data)
+    cost = fluid.layers.sqrt(squar, name=None)
+    # print(cost.shape)
+    avg_cost = fluid.layers.mean(cost)
+    # print(avg_cost.shape)
 
     # jointly training联合训练
     # 获取损失函数和准确率函数
-    joint_loss = density_map_loss
-    avg_cost = fluid.layers.mean(joint_loss)
+    # joint_loss = density_map_loss
+    # avg_cost = fluid.layers.mean(joint_loss)
     # acc = fluid.layers.accuracy(input=inference_density_map, label=density_map_data)
 
     # 获取训练和测试程序
@@ -57,8 +63,7 @@ def train():
 
     # 我们使用的是Adam优化方法，同时指定学习率
     # 定义优化方法
-    optimizer = fluid.optimizer.AdamOptimizer(learning_rate=cfig.lr,
-                                              regularization=fluid.regularizer.L2DecayRegularizer(1e-4))
+    optimizer = fluid.optimizer.AdamOptimizer(learning_rate=cfig.lr)
     optimizer.minimize(avg_cost)
 
     # 定义一个使用GPU的执行器
@@ -111,11 +116,21 @@ def train():
 
             # 数据增强
             Data_enhancement = np.random.randint(2)
+            # Data_enhancement = 0
             # print(Data_enhancement)
             if Data_enhancement == 0:
                 img, gt_dmp, gt_count = read_crop_train_data(img_path, gt_path, scale=4)
             else:
                 img, gt_dmp, gt_count = read_resize_train_data(img_path, gt_path, scale=4)
+
+            # show_density_map(img[0, 0, :, :])
+            # show_density_map(gt_dmp[0, 0, :, :])
+            # plt.imshow(img[0, 0, :, :])
+            # plt.show()
+            # cv.imshow("123", img[0, :, :, :])
+            # # cv.imshow("123", rea_img)
+            # cv.waitKey(0)
+            # cv.destroyAllWindows()
 
             # 数据读入
             feed_dict = {'input_img_data': ((img - 127.5) / 128).astype(np.float32),
@@ -125,6 +140,8 @@ def train():
             inf_dmp, loss = exe.run(program=fluid.default_main_program(),
                                     feed=feed_dict,
                                     fetch_list=[inference_density_map, avg_cost])
+
+            # show_density_map(inf_dmp[0, 0, :, :])
 
             if step % 100 == 0:
                 event_handler_plot(train_prompt, step, loss[0])
@@ -143,7 +160,7 @@ def train():
             step += 1
 
         # 测试
-        if i % 50 == 0:
+        if i % 5 == 0:
             # 训练的过程中可以保存预测模型，用于之后的预测。
             # 保存预测模型
             save_path = cfig.model_router + 'infer_model' + str(i) + '/'
@@ -186,7 +203,7 @@ def train():
 
                 # 测试过程查看
                 format_time = str(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
-                format_str = 'iter={}, step={}, joint loss={}, inference={}, gt={} '
+                format_str = 'Test iter={}, step={}, joint loss={}, inference={}, gt={} '
                 absolute_error = absolute_error + np.abs(np.subtract(gt_count, inf_dmp.sum())).mean()
                 square_error = square_error + np.power(np.subtract(gt_count, inf_dmp.sum()), 2).mean()
                 log_line = format_time, val_img_file_list[file_index], format_str.format(i,

@@ -118,12 +118,24 @@ def read_crop_train_data(img_path, gt_path, crop_size=256, scale=4, knn_phase=Tr
                                   knn_phase, k, scaled_min_head_size, scaled_max_head_size)
 
     # cropped_crowd_img = np.asarray(cropped_crowd_img)
-    cropped_crowd_img = cropped_crowd_img.reshape(
-        (1, 3, cropped_crowd_img.shape[0], cropped_crowd_img.shape[1]))
+    # cropped_crowd_img = cropped_crowd_img.reshape(
+    #     (1, 3, cropped_crowd_img.shape[0], cropped_crowd_img.shape[1]))
+
+    # print(cropped_crowd_img.shape)
+    # cv.imshow("123", cropped_crowd_img)
+
+    im = cropped_crowd_img.transpose().astype('float32')
+    im = np.expand_dims(im, axis=0)
+    density_map = density_map.transpose().astype('float32')
+
+    # print(im.shape)
+    # cv.waitKey(0)
+    # cv.destroyAllWindows()
+
     cropped_crowd_count = np.asarray(cropped_crowd_count).reshape((1, 1))
     cropped_scaled_density_map = density_map.reshape((1, 1, density_map.shape[0], density_map.shape[1]))
 
-    return cropped_crowd_img, cropped_scaled_density_map, cropped_crowd_count
+    return im, cropped_scaled_density_map, cropped_crowd_count
 
 
 def read_train_data2(img_path, gt_path, crop_size=256, scale=4):
@@ -237,12 +249,25 @@ def read_resize_train_data(img_path, gt_path, scale=4, knn_phase=True, k=2, min_
                                   knn_phase, k, scaled_min_head_size, scaled_max_head_size)
 
     # cropped_crowd_img = np.asarray(cropped_crowd_img)
-    cropped_crowd_img = scaled_img.reshape(
-        (1, 3, scaled_img.shape[0], scaled_img.shape[1]))
+    # cropped_crowd_img = scaled_img.reshape(
+    #     (1, 3, scaled_img.shape[0], scaled_img.shape[1]))
+
+    # print(density_map.shape)
+    # print(scaled_img.shape)
+    # cv.imshow("123", scaled_img)
+
+    im = scaled_img.transpose().astype('float32')
+    im = np.expand_dims(im, axis=0)
+    density_map = density_map.transpose().astype('float32')
+
+    # print(im.shape)
+    # cv.waitKey(0)
+    # cv.destroyAllWindows()
+
     cropped_crowd_count = np.asarray(cropped_crowd_count).reshape((1, 1))
     cropped_scaled_density_map = density_map.reshape((1, 1, density_map.shape[0], density_map.shape[1]))
 
-    return cropped_crowd_img, cropped_scaled_density_map, cropped_crowd_count
+    return im, cropped_scaled_density_map, cropped_crowd_count
 
 
 def show_density_map(density_map):
@@ -262,6 +287,8 @@ if __name__ == '__main__':
 
     sum = np.sum(np.sum(density_map))
     print(sum, cropped_crowd_count)
+    print(density_map.shape)
     result = density_map[0, 0, :, :]
     print(result.shape)
     show_density_map(result)
+    show_density_map(crowd_img[0, 0, :, :])
