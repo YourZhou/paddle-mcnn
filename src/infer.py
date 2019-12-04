@@ -43,6 +43,7 @@ def image_processing(input):
 
     # 生成热力图
     heat_img = cv.applyColorMap(dst, cv.COLORMAP_JET)  # 注意此处的三通道热力图是cv2专有的GBR排列
+    # heat_img = heat_img[..., [1, 0, 2]]
     output = cv.cvtColor(heat_img, cv.COLOR_BGR2RGB)  # 将BGR图像转为RGB图像
 
     return output
@@ -52,6 +53,9 @@ def image_processing(input):
 def image_add_heatmap(frame, heatmap, alpha=0.5):
     img_size = frame.shape
     heatmap = cv.resize(heatmap, (img_size[1], img_size[0]))
+    # cv.imshow("really", heatmap)
+    # cv.waitKey(0)
+    # cv.destroyAllWindows()
     overlay = frame.copy()
     cv.rectangle(overlay, (0, 0), (frame.shape[1], frame.shape[0]), (255, 0, 0), -1)  # 设置蓝色为热度图基本色
     cv.addWeighted(overlay, alpha, frame, 1 - alpha, 0, frame)  # 将背景热度图覆盖到原图
@@ -82,15 +86,21 @@ def main():
     exe.run(fluid.default_startup_program())
 
     # 保存预测模型路径
-    save_path = '../model/mcnn/infer_model5/'
+    save_path = '../modelV1/mcnn/infer_model50/'
     # 从模型中获取预测程序、输入数据名称列表、分类器
     [infer_program, feeded_var_names, target_var] = fluid.io.load_inference_model(dirname=save_path, executor=exe)
 
-    img = load_image("./data_samples/IMG_1.jpg")
+    img = load_image("./data_samples/IMG_2.jpg")
     # 执行预测
+    stat_time = time.time()
+
+    infer_img = img.astype(np.float32) / 255.0 * 2.0 - 1.0
     result = exe.run(program=infer_program,
-                     feed={feeded_var_names[0]: ((img - 127.5) / 128).astype(np.float32)},
+                     feed={feeded_var_names[0]: infer_img},
                      fetch_list=target_var)
+
+    over_time = time.time() - stat_time
+    print(over_time)
 
     # show_density_map(result[0, 0, :, :])
 
@@ -98,13 +108,16 @@ def main():
     print(num)
     result = result[0][0][-1]
     print(result.shape)
+    # result = result[..., [2, 0, 1]]
     show_density_map(result)
     result = result.transpose().astype('float32')
 
     show_density_map(result)
-    ori_crowd_img = cv.imread("./data_samples/IMG_1.jpg")
+    # cv.imshow("really", result)
+    ori_crowd_img = cv.imread("./data_samples/IMG_2.jpg")
     # ori_crowd_img = cv.flip(ori_crowd_img, 1)
     final_img = image_processing(result)
+    # cv.imshow("really", final_img)
     final_img = image_add_heatmap(ori_crowd_img, final_img, 0.5)
 
     cv.putText(final_img, "P : " + str(int(num)), (50, 50), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)

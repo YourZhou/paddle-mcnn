@@ -115,8 +115,8 @@ def train():
             # 得到需要训练的图片、真实密度图、真实数量
 
             # 数据增强
-            Data_enhancement = np.random.randint(2)
-            # Data_enhancement = 0
+            # Data_enhancement = np.random.randint(2)
+            Data_enhancement = 1
             # print(Data_enhancement)
             if Data_enhancement == 0:
                 img, gt_dmp, gt_count = read_crop_train_data(img_path, gt_path, scale=4)
@@ -132,8 +132,10 @@ def train():
             # cv.waitKey(0)
             # cv.destroyAllWindows()
 
+            # train_img = ((img - 127.5) / 128).astype(np.float32)
+            train_img = img.astype(np.float32) / 255.0 * 2.0 - 1.0
             # 数据读入
-            feed_dict = {'input_img_data': ((img - 127.5) / 128).astype(np.float32),
+            feed_dict = {'input_img_data': train_img,
                          'density_map_data': gt_dmp.astype(np.float32)}
 
             # 训练主题
@@ -143,8 +145,8 @@ def train():
 
             # show_density_map(inf_dmp[0, 0, :, :])
 
-            if step % 100 == 0:
-                event_handler_plot(train_prompt, step, loss[0])
+            # if step % 100 == 0:
+            #     event_handler_plot(train_prompt, step, loss[0])
 
             # 得到当前时间
             format_time = str(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))

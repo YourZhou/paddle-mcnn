@@ -282,9 +282,9 @@ def show_density_map(density_map):
 
 if __name__ == '__main__':
     crowd_img, density_map, cropped_crowd_count = read_resize_train_data(
-        './data_samples/IMG_2.jpg',
-        './data_samples/GT_IMG_2.mat', scale=4)
-
+        'D:/people_all/ShanghaiTech/part_A_final/train_data/images/IMG_50.jpg',
+        '‪D:/people_all/ShanghaiTech/part_A_final/train_data/ground_truth/GT_IMG_50.mat', scale=4)
+    print(crowd_img.shape)
     sum = np.sum(np.sum(density_map))
     print(sum, cropped_crowd_count)
     print(density_map.shape)

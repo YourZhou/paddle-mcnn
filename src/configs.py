@@ -7,7 +7,7 @@ class ConfigFactory:
     def __init__(self, name='mcnn'):
         self.name = name
         self.batch_size = 1
-        self.lr = 0.00001
+        self.lr = 0.000001
         self.lr_decay = 0.9
         self.momentum = 0.9
         self.total_iters = 200000

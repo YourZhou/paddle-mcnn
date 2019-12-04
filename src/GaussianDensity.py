@@ -4,7 +4,8 @@
 
 import math
 import numpy as np
-
+import scipy
+import cv2 as cv
 
 
 def fspecial(ksize, sigma):
@@ -175,3 +176,48 @@ def get_density_map(scaled_crowd_img_size, scaled_points, knn_phase, k, scaled_m
         H = fspecial(ksize, sigma)
         density_map[x1:x1 + ksize, y1:y1 + ksize] = density_map[x1:x1 + ksize, y1:y1 + ksize] + H
     return np.asarray(density_map)
+
+
+# 密度图生成
+def image_processing(input):
+    # 高斯模糊
+    kernel_size = (3, 3)
+    sigma = 15
+    r_img = cv.GaussianBlur(input, kernel_size, sigma)
+
+    # 灰度图标准化
+    norm_img = np.zeros(r_img.shape)
+    norm_img = cv.normalize(r_img, norm_img, 0, 255, cv.NORM_MINMAX)
+    norm_img = np.asarray(norm_img, dtype=np.uint8)
+    # r_img = cv.resize(r_img, (720, 420))
+    # utils.show_density_map(r_img)
+
+    # 灰度图颜色反转
+    imgInfo = norm_img.shape
+    heigh = imgInfo[0]
+    width = imgInfo[1]
+    dst = np.zeros((heigh, width, 1), np.uint8)
+    for i in range(0, heigh):
+        for j in range(0, width):
+            grayPixel = norm_img[i, j]
+            dst[i, j] = 255 - grayPixel
+
+    # 生成热力图
+    heat_img = cv.applyColorMap(dst, cv.COLORMAP_JET)  # 注意此处的三通道热力图是cv2专有的GBR排列
+    output = cv.cvtColor(heat_img, cv.COLOR_BGR2RGB)  # 将BGR图像转为RGB图像
+
+    return output
+
+
+# 密度图与原图叠加
+def image_add_heatmap(frame, heatmap, alpha=0.5):
+    img_size = frame.shape
+    heatmap = cv.resize(heatmap, (img_size[1], img_size[0]))
+    # cv.imshow("really", heatmap)
+    # cv.waitKey(0)
+    # cv.destroyAllWindows()
+    overlay = frame.copy()
+    cv.rectangle(overlay, (0, 0), (frame.shape[1], frame.shape[0]), (255, 0, 0), -1)  # 设置蓝色为热度图基本色
+    cv.addWeighted(overlay, alpha, frame, 1 - alpha, 0, frame)  # 将背景热度图覆盖到原图
+    cv.addWeighted(heatmap, alpha, frame, 1 - alpha, 0, frame)  # 将热度图覆盖到原图
+    return frame
